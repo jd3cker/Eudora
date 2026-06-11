@@ -50,7 +50,7 @@ PYTHONPATH=src python3 -m eudora.cli run --config config.toml
 cat trades.jsonl                           # see what it would have done
 ```
 
-Sample data for `AAPL`/`MSFT` is included under `data/` so this works
+Synthetic sample data for `ACME`/`GLOB` is included under `data/` so this works
 immediately. Add your own as `data/<SYMBOL>.csv` with a `close` column.
 
 Run the tests:
@@ -60,6 +60,43 @@ python3 -m unittest discover -s tests
 ```
 
 ---
+
+## Evaluate before risking capital (backtest)
+
+Replay the strategy over historical closes and see how it would have done —
+**no auth, no real money.** This is the step to do *before* funding anything.
+
+```bash
+PYTHONPATH=src python3 -m eudora.cli backtest --config config.toml
+# also enforce the live [risk] caps during the replay:
+PYTHONPATH=src python3 -m eudora.cli backtest --config config.toml --apply-risk
+```
+
+Example output (on the bundled **synthetic** sample data):
+
+```
+  Starting capital : $500.00
+  Final equity     : $604.01
+  Total return     : +20.80%
+  Buy & hold (eq-wt): +10.41%
+  Max drawdown     : 4.45%
+  Orders placed    : 23
+  Closed round-trips: 11
+  Win rate         : 90.9%
+```
+
+> ⚠️ **Those numbers are meaningless as a forecast.** The bundled `ACME`/`GLOB`
+> data is synthetic oscillating series that a crossover strategy trivially
+> profits from. **Before trusting this strategy with real money, drop real
+> historical daily closes into `data/<TICKER>.csv` (a `close` column) and
+> backtest those.** Compare against the buy & hold benchmark — if the strategy
+> doesn't beat it after costs, don't run it live. The backtest is walk-forward
+> (no look-ahead) and reuses the exact strategy/sizing/risk code the live engine
+> uses, so it's a faithful dry simulation — but it's only as good as the data.
+
+The risk manager's daily window is anchored to the data's timeline (one bar =
+one day), so `--apply-risk` reflects how the $500 caps would actually behave
+live rather than collapsing into the replay instant.
 
 ## Going live (real money)
 
@@ -126,9 +163,11 @@ PYTHONPATH=src python3 -m eudora.cli loop --interval 3600 --live --i-understand-
 5. **Full audit trail.** Every placed / skipped / rejected decision is written
    to `trades.jsonl` with its reason.
 
-Recommended first live config: one or two symbols, `max_daily_notional = 500`,
+Recommended first live config (and the bundled default): **$500 initial
+capital**, one or two lower-priced symbols, `max_daily_notional = 500`,
 `order_notional` small, RSI filter on, and watch the journal for a few sessions
-before loosening anything.
+before loosening anything. Fund the Robinhood Agentic Trading account with only
+that $500 — it's the hard ceiling on what the bot can ever touch.
 
 ---
 

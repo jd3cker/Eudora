@@ -39,9 +39,15 @@ class RiskManager:
     _order_times: Deque[float] = field(default_factory=deque, init=False)
     _daily_notional: float = field(default=0.0, init=False)
     _daily_orders: int = field(default=0, init=False)
-    _day_started: float = field(default_factory=time.time, init=False)
+    # Seeded lazily from the first timestamp observed (which may be simulated
+    # bar-time in a backtest, not wall-clock), so the 24h window is anchored to
+    # the data rather than to object-construction time.
+    _day_started: Optional[float] = field(default=None, init=False)
 
     def _roll_day(self, now: float) -> None:
+        if self._day_started is None:
+            self._day_started = now
+            return
         if now - self._day_started >= 24 * 3600:
             self._daily_notional = 0.0
             self._daily_orders = 0

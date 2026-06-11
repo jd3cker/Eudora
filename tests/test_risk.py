@@ -64,6 +64,26 @@ class TestRiskManager(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("circuit breaker", reason)
 
+    def test_day_rolls_from_first_timestamp(self):
+        # Day window anchors to the first observed `now` (here simulated
+        # bar-time starting near 0), not wall-clock construction time.
+        ok, _ = self.rm.check(Side.BUY, 10, 10.0, 0.0, now=0.0)
+        self.assertTrue(ok)
+        self.rm.record_fill(10, 10.0, now=0.0)  # $100 of $500 daily
+        self.assertEqual(self.rm._daily_notional, 100.0)
+
+    def test_daily_counters_reset_next_day(self):
+        # Fill up to the daily notional cap on "day 0", then advance >24h.
+        t = 0.0
+        for _ in range(5):
+            self.assertTrue(self.rm.check(Side.BUY, 10, 10.0, 0.0, now=t)[0])
+            self.rm.record_fill(10, 10.0, now=t)
+            t += 61
+        self.assertFalse(self.rm.check(Side.BUY, 10, 10.0, 0.0, now=t)[0])  # capped
+        # Next day: budget resets, trading allowed again.
+        ok, _ = self.rm.check(Side.BUY, 10, 10.0, 0.0, now=t + 24 * 3600)
+        self.assertTrue(ok)
+
     def test_kill_switch(self):
         with tempfile.NamedTemporaryFile(delete=False) as fh:
             kill_path = fh.name

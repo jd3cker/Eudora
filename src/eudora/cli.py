@@ -14,6 +14,7 @@ import sys
 import time
 
 from . import config as cfg_mod
+from .backtest import Backtester
 from .broker.paper import PaperBroker
 from .engine import Engine
 from .feed.base import CsvPriceFeed
@@ -80,6 +81,34 @@ def cmd_loop(args) -> int:
     return 0
 
 
+def cmd_backtest(args) -> int:
+    cfg = cfg_mod.load_toml(args.config)
+    strategy = cfg_mod.build_strategy(cfg)
+    engine_cfg = cfg_mod.build_engine_config(cfg)
+    feed = CsvPriceFeed(cfg.get("feed", {}).get("directory", "data"))
+
+    # Pull full history for each symbol (large lookback => entire CSV).
+    closes = {sym: feed.closes(sym, 10**9) for sym in engine_cfg.symbols}
+    closes = {s: c for s, c in closes.items() if c}
+    if not closes:
+        print("No price data found for configured symbols.", file=sys.stderr)
+        return 1
+
+    starting_cash = cfg.get("backtest", {}).get("starting_cash", 500.0)
+    risk = cfg_mod.build_risk(cfg) if args.apply_risk else None
+    bt = Backtester(
+        strategy, closes,
+        starting_cash=starting_cash,
+        order_notional=engine_cfg.order_notional,
+        risk=risk,
+    )
+    result = bt.run()
+    print(result.summary())
+    print(f"\n  Symbols          : {', '.join(closes)}")
+    print(f"  Risk caps applied: {'yes' if args.apply_risk else 'no (raw strategy)'}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="eudora", description="Rule-based Robinhood trading bot")
     sub = p.add_subparsers(dest="command", required=True)
@@ -96,6 +125,12 @@ def build_parser() -> argparse.ArgumentParser:
     loop = sub.add_parser("loop", parents=[common], help="evaluate repeatedly")
     loop.add_argument("--interval", type=float, default=300.0, help="seconds between runs")
     loop.set_defaults(func=cmd_loop)
+
+    bt = sub.add_parser("backtest", help="replay the strategy over historical data")
+    bt.add_argument("--config", default="config.toml")
+    bt.add_argument("--apply-risk", action="store_true",
+                    help="also enforce the [risk] caps during the backtest")
+    bt.set_defaults(func=cmd_backtest)
     return p
 
 

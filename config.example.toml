@@ -1,15 +1,19 @@
 # Eudora configuration. Copy to config.toml and edit.
 
+# NOTE: ACME/GLOB are SAMPLE symbols backed by synthetic data in data/ so the
+# bot runs out of the box. Replace with real tickers (and real price data) for
+# live use. With $500 capital, prefer lower-priced symbols — the sizer buys
+# WHOLE shares, so a $400 stock with order_notional < $400 places nothing.
 [engine]
-symbols = ["AAPL", "MSFT"]
+symbols = ["ACME", "GLOB"]
 lookback = 200          # bars of history fed to indicators
 order_notional = 100.0  # target $ per BUY (risk caps still apply)
 dry_run = true          # ALWAYS start true; --live on the CLI overrides
 
 [strategy]
 name = "sma_crossover"
-fast = 20
-slow = 50
+fast = 10
+slow = 30
 rsi_period = 14
 rsi_overbought = 70.0   # skip buys when RSI >= this; set to false to disable
 
@@ -28,7 +32,12 @@ kill_switch_file = "KILL_SWITCH"   # create this file to halt all trading instan
 directory = "data"      # CsvPriceFeed reads data/<SYMBOL>.csv (needs a 'close' column)
 
 [paper]
-starting_cash = 10000.0
+# Dry-run capital — mirror your real funded amount so dry runs are realistic.
+starting_cash = 500.0
+
+[backtest]
+# Capital assumed when replaying the strategy over history.
+starting_cash = 500.0
 
 [journal]
 path = "trades.jsonl"
