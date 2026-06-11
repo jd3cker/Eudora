@@ -1,0 +1,20 @@
+# Secrets — never commit a token
+.env
+*.token
+
+# Runtime artifacts
+trades.jsonl
+KILL_SWITCH
+
+# Your real config (the committed template is config.example.toml)
+config.toml
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/

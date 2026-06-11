@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eudora"
+version = "0.1.0"
+description = "A rule-based, risk-managed trading bot for Robinhood Agentic Trading (MCP)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    # The core (indicators, strategy, risk, paper trading, backtests) has NO
+    # third-party dependencies. The MCP SDK is only needed for live trading.
+]
+
+[project.optional-dependencies]
+live = ["mcp>=1.0"]      # required only for live Robinhood trading + tool discovery
+dev = []                 # tests use the stdlib unittest runner
+
+[project.scripts]
+eudora = "eudora.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

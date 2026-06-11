@@ -1,0 +1,44 @@
+# Eudora configuration. Copy to config.toml and edit.
+
+[engine]
+symbols = ["AAPL", "MSFT"]
+lookback = 200          # bars of history fed to indicators
+order_notional = 100.0  # target $ per BUY (risk caps still apply)
+dry_run = true          # ALWAYS start true; --live on the CLI overrides
+
+[strategy]
+name = "sma_crossover"
+fast = 20
+slow = 50
+rsi_period = 14
+rsi_overbought = 70.0   # skip buys when RSI >= this; set to false to disable
+
+[risk]
+# Independent software-side limits — defence in depth on top of Robinhood's
+# own Agentic Trading account daily cap. Keep these conservative.
+max_order_notional = 200.0
+max_daily_notional = 500.0     # mirror your Robinhood account daily cap
+max_daily_orders = 20
+max_orders_in_window = 5       # circuit breaker
+max_orders_window_sec = 60.0
+allow_short = false
+kill_switch_file = "KILL_SWITCH"   # create this file to halt all trading instantly
+
+[feed]
+directory = "data"      # CsvPriceFeed reads data/<SYMBOL>.csv (needs a 'close' column)
+
+[paper]
+starting_cash = 10000.0
+
+[journal]
+path = "trades.jsonl"
+
+# Live Robinhood MCP tool names. Fill these in from scripts/discover_mcp_tools.py
+# AFTER authenticating, then set confirmed = true. The live broker refuses to
+# run while any name is still a TODO_ placeholder.
+[broker.tools]
+get_account = "TODO_get_account"
+get_positions = "TODO_get_positions"
+get_quote = "TODO_get_quote"
+place_order = "TODO_place_order"
+confirmed = false
